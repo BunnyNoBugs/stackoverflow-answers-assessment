@@ -162,3 +162,5 @@ cython_debug/
 #data
 *.csv
 *.txt
+data/**/*.json
+*.arrow
