@@ -1,3 +1,4 @@
 # paths are relative to the project root
 data:
   dalip_stackoverflow_dataset: "data/dalip_stackoverflow_dataset/dalip_stackoverflow_dataset.csv"
+  dalip_hf_dataset: "data/dalip_hf_dataset/"
