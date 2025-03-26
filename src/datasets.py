@@ -1,10 +1,101 @@
 from typing import Tuple
 import pandas as pd
 from collections import defaultdict
+from datasets import Dataset, Value, DatasetDict
+from sklearn.model_selection import train_test_split
 
 
-class DalipDataset:
-    pass
+def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Transform a Dalip-like dataset from a collections of posts to question-answer pairs.
+    :param dataset_df:
+    :return:
+    """
+    question_features = [
+        'Id', 'CreationDate', 'Score', 'ViewCount', 'Body', 'LastEditDate', 'LastActivityDate', 'Title', 'Tags',
+        'AnswerCount',
+        'CommentCount', 'FavoriteCount', 'ClosedDate', 'CommunityOwnedDate', 'AcceptedAnswerId']
+    questions_df = dataset_df[dataset_df['PostTypeId'] == 1][question_features].rename(
+        columns={
+            'Id': 'question_id',
+            'CreationDate': 'question_creation_date',
+            'Score': 'question_score',
+            'ViewCount': 'question_view_count',
+            'Body': 'question_body',
+            'LastEditDate': 'question_last_edit_date',
+            'LastActivityDate': 'question_last_activity_date',
+            'Title': 'question_title',
+            'Tags': 'question_tags',
+            'AnswerCount': 'question_answer_count',
+            'CommentCount': 'question_comment_count',
+            'FavoriteCount': 'question_favorite_count',
+            'ClosedDate': 'question_closed_date',
+            'CommunityOwnedDate': 'question_community_owned_date',
+            'AcceptedAnswerId': 'accepted_answer_id'
+        })
+
+    answer_features = ['Id', 'ParentId', 'CreationDate', 'Score', 'Body', 'LastEditDate', 'LastActivityDate',
+                       'CommentCount', 'CommunityOwnedDate']
+    answers_df = dataset_df[dataset_df['PostTypeId'] == 2][answer_features].rename(
+        columns={
+            'Id': 'answer_id',
+            'ParentId': 'question_id',
+            'CreationDate': 'answer_creation_date',
+            'Score': 'answer_score',
+            'Body': 'answer_body',
+            'LastEditDate': 'answer_last_edit_date',
+            'LastActivityDate': 'answer_last_activity_date',
+            'CommentCount': 'answer_comment_count',
+            'CommunityOwnedDate': 'answer_community_owned_date'
+        })
+
+    qa_pairs_df = pd.merge(answers_df, questions_df, on='question_id', how='inner')
+    qa_pairs_df['answer_accepted'] = qa_pairs_df['answer_id'] == qa_pairs_df['accepted_answer_id']
+    qa_pairs_df = qa_pairs_df.drop(columns=['accepted_answer_id'])
+
+    return qa_pairs_df
+
+
+def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42) -> Dataset:
+    """
+    Convert a Dalip-like dataset to a HuggingFace Dataset of question-answer pairs and perform a train-test split.
+    :param test_size:
+    :param random_state:
+    :param dataset_df:
+    :return:
+    """
+    # todo: add accepted answer
+    question_ids = dataset_df[dataset_df['PostTypeId'] == 1]['Id'].unique()
+    train_question_ids, test_question_ids = train_test_split(question_ids, test_size=test_size,
+                                                             random_state=random_state)
+    train_df = dataset_df[dataset_df['ParentId'].isin(train_question_ids) | dataset_df['Id'].isin(train_question_ids)]
+    test_df = dataset_df[dataset_df['ParentId'].isin(test_question_ids) | dataset_df['Id'].isin(test_question_ids)]
+
+    train_qa_pairs_df = dalip_dataset_create_pairs(train_df)
+    test_qa_pairs_df = dalip_dataset_create_pairs(test_df)
+
+    train_hf_dataset = Dataset.from_pandas(train_qa_pairs_df, preserve_index=False).cast_column('question_id', Value('int64'))
+    test_hf_dataset = Dataset.from_pandas(test_qa_pairs_df, preserve_index=False).cast_column('question_id', Value('int64'))
+
+    hf_dataset = DatasetDict({'train': train_hf_dataset, 'test': test_hf_dataset})
+
+    return hf_dataset
+
+
+class DalipLikeDataset:
+    """
+    Implements a dataset ...
+    """
+
+    def __init__(self, dataset_df: pd.DataFrame):
+        # todo: transform to constructor from pd.DataFrame
+        ...
+
+    def train_test_split(self):  # ???
+        ...
+
+    def to_huggingface_dataset(self):
+        ...
 
 
 class PredictionTransformer:
