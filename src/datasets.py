@@ -64,7 +64,6 @@ def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.
     :param dataset_df:
     :return:
     """
-    # todo: add accepted answer
     question_ids = dataset_df[dataset_df['PostTypeId'] == 1]['Id'].unique()
     train_question_ids, test_question_ids = train_test_split(question_ids, test_size=test_size,
                                                              random_state=random_state)
@@ -74,28 +73,14 @@ def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.
     train_qa_pairs_df = dalip_dataset_create_pairs(train_df)
     test_qa_pairs_df = dalip_dataset_create_pairs(test_df)
 
-    train_hf_dataset = Dataset.from_pandas(train_qa_pairs_df, preserve_index=False).cast_column('question_id', Value('int64'))
-    test_hf_dataset = Dataset.from_pandas(test_qa_pairs_df, preserve_index=False).cast_column('question_id', Value('int64'))
+    train_hf_dataset = Dataset.from_pandas(train_qa_pairs_df, preserve_index=False).cast_column('question_id',
+                                                                                                Value('int64'))
+    test_hf_dataset = Dataset.from_pandas(test_qa_pairs_df, preserve_index=False).cast_column('question_id',
+                                                                                              Value('int64'))
 
     hf_dataset = DatasetDict({'train': train_hf_dataset, 'test': test_hf_dataset})
 
     return hf_dataset
-
-
-class DalipLikeDataset:
-    """
-    Implements a dataset ...
-    """
-
-    def __init__(self, dataset_df: pd.DataFrame):
-        # todo: transform to constructor from pd.DataFrame
-        ...
-
-    def train_test_split(self):  # ???
-        ...
-
-    def to_huggingface_dataset(self):
-        ...
 
 
 class PredictionTransformer:
