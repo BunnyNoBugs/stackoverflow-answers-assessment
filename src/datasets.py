@@ -5,6 +5,23 @@ from datasets import Dataset, Value, DatasetDict
 from sklearn.model_selection import train_test_split
 
 
+def dalip_normalize_answer_scores(dataset_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize answer scores in a Dalip-like dataset to avoid negative values in nDCG computation.
+    :param dataset_df:
+    :return:
+    """
+    answers_mask = dataset_df['PostTypeId'] == 2
+
+    dataset_df['NormalizedScore'] = pd.NA
+
+    min_answer_score = dataset_df.loc[answers_mask, 'Score'].min()
+
+    dataset_df.loc[answers_mask, 'NormalizedScore'] = dataset_df.loc[answers_mask, 'Score'] - min_answer_score
+
+    return dataset_df
+
+
 def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
     """
     Transform a Dalip-like dataset from a collections of posts to question-answer pairs.
@@ -34,14 +51,15 @@ def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
             'AcceptedAnswerId': 'accepted_answer_id'
         })
 
-    answer_features = ['Id', 'ParentId', 'CreationDate', 'Score', 'Body', 'LastEditDate', 'LastActivityDate',
-                       'CommentCount', 'CommunityOwnedDate']
+    answer_features = ['Id', 'ParentId', 'CreationDate', 'Score', 'NormalizedScore', 'Body', 'LastEditDate',
+                       'LastActivityDate', 'CommentCount', 'CommunityOwnedDate']
     answers_df = dataset_df[dataset_df['PostTypeId'] == 2][answer_features].rename(
         columns={
             'Id': 'answer_id',
             'ParentId': 'question_id',
             'CreationDate': 'answer_creation_date',
             'Score': 'answer_score',
+            'NormalizedScore': 'answer_normalized_score',
             'Body': 'answer_body',
             'LastEditDate': 'answer_last_edit_date',
             'LastActivityDate': 'answer_last_activity_date',
@@ -56,14 +74,20 @@ def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
     return qa_pairs_df
 
 
-def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42) -> Dataset:
+def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.2,
+                                 random_state: int = 42) -> DatasetDict:
     """
-    Convert a Dalip-like dataset to a HuggingFace Dataset of question-answer pairs and perform a train-test split.
+    Convert a Dalip-like dataset to a HuggingFace Dataset of question-answer pairs.
+    Additional operations:
+    - normalize answer scores
+    - perform a train-test split.
     :param test_size:
     :param random_state:
     :param dataset_df:
     :return:
     """
+    dataset_df = dalip_normalize_answer_scores(dataset_df)
+
     question_ids = dataset_df[dataset_df['PostTypeId'] == 1]['Id'].unique()
     train_question_ids, test_question_ids = train_test_split(question_ids, test_size=test_size,
                                                              random_state=random_state)
