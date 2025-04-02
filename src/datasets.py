@@ -107,27 +107,19 @@ def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.
     return hf_dataset
 
 
-class PredictionTransformer:
-    def __init__(self, dataset_name='dalip'):
-        # can be adapted to other datasets in the future
-        self.dataset_name = dataset_name
+def pairs_to_rankings(targets, predictions, group_ids) -> Tuple[dict, dict]:
+    """
+    Transform pair relevance predictions to rankings.
+    :param targets:
+    :param predictions:
+    :param group_ids:
+    :return:
+    """
+    true_scores = defaultdict(list)
+    predicted_scores = defaultdict(list)
 
-    def transform_to_rankings(self, predictions, target_dataset_df: pd.DataFrame) -> Tuple[dict]:
-        """
-        Transform predictions to rankings.
-        :param target_dataset_df:
-        :param predictions:
-        :return: Tuple (true_scores, predicted_scores)
-        """
-        true_scores = defaultdict(list)
-        predicted_scores = defaultdict(list)
+    for prediction, target, group_id in zip(predictions, targets, group_ids):
+        true_scores[group_id].append(target)
+        predicted_scores[group_id].append(prediction)
 
-        for (_, row), prediction in zip(target_dataset_df.iterrows(), predictions):
-            if self.dataset_name == 'dalip':
-                question_id = row['ParentId']
-                true_scores[question_id].append(row['Score'])
-                predicted_scores[question_id].append(prediction)
-            else:
-                raise NotImplementedError
-
-        return true_scores, predicted_scores
+    return true_scores, predicted_scores
