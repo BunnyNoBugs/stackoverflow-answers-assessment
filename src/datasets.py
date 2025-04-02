@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional, List
 import pandas as pd
 from collections import defaultdict
 from datasets import Dataset, Value, DatasetDict
@@ -74,8 +74,8 @@ def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
     return qa_pairs_df
 
 
-def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.2,
-                                 random_state: int = 42) -> DatasetDict:
+def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42,
+                                 test_question_ids: Optional[List[int]] = None) -> DatasetDict:
     """
     Convert a Dalip-like dataset to a HuggingFace Dataset of question-answer pairs.
     Additional operations:
@@ -84,13 +84,19 @@ def dalip_dataset_to_huggingface(dataset_df: pd.DataFrame, test_size: float = 0.
     :param test_size:
     :param random_state:
     :param dataset_df:
+    :param test_question_ids:
     :return:
     """
     dataset_df = dalip_normalize_answer_scores(dataset_df)
 
-    question_ids = dataset_df[dataset_df['PostTypeId'] == 1]['Id'].unique()
-    train_question_ids, test_question_ids = train_test_split(question_ids, test_size=test_size,
-                                                             random_state=random_state)
+    question_ids = pd.Series(dataset_df[dataset_df['PostTypeId'] == 1]['Id'].unique())
+
+    if test_question_ids is None:
+        train_question_ids, test_question_ids = train_test_split(question_ids, test_size=test_size,
+                                                                 random_state=random_state)
+    else:
+        train_question_ids = question_ids[~question_ids.isin(test_question_ids)]
+
     train_df = dataset_df[dataset_df['ParentId'].isin(train_question_ids) | dataset_df['Id'].isin(train_question_ids)]
     test_df = dataset_df[dataset_df['ParentId'].isin(test_question_ids) | dataset_df['Id'].isin(test_question_ids)]
 
