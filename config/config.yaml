@@ -2,3 +2,4 @@
 data:
   dalip_stackoverflow_dataset: "data/dalip_stackoverflow_dataset/dalip_stackoverflow_dataset.csv"
   dalip_hf_dataset: "data/dalip_hf_dataset/"
+  dalip_stackoverflow_mv_feat_mv_results: "data/dalip_stackoverflow_results/MV_FEAT_MV_results_stack.txt"
