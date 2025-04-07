@@ -164,3 +164,4 @@ cython_debug/
 *.txt
 data/**/*.json
 *.arrow
+wandb
