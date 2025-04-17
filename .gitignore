@@ -164,4 +164,9 @@ cython_debug/
 *.txt
 data/**/*.json
 *.arrow
+
+#evaluation
 wandb
+
+#models
+*.pickle
