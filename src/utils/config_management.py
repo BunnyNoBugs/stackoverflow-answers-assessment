@@ -11,8 +11,9 @@ def load_config(config_path=CONFIG_PATH):
     with open(config_path) as file:
         config = yaml.safe_load(file)
 
-    for d in config['data']:
-        config['data'][d] = os.path.join(PROJECT_ROOT, config['data'][d])
+    for path_group in config['paths']:
+        for path in config['paths'][path_group]:
+            config['paths'][path_group][path] = os.path.join(PROJECT_ROOT, config['paths'][path_group][path])
 
     return config
 
