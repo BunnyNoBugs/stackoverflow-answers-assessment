@@ -107,7 +107,7 @@ class RankingEvaluator:
                 ndcg_value = compute_custom_ndcg(true_rankings, predicted_rankings,
                                                  ndcg_k, self.ndcg_gain_func, self.ndcg_discount_func)
 
-            results[f'g.{self.ndcg_gain_func}_d.{self.ndcg_discount_func}_ndcg@{ndcg_k}'] = ndcg_value
+            results[f'ndcg@{ndcg_k}_g.{self.ndcg_gain_func}_d.{self.ndcg_discount_func}'] = ndcg_value
 
         results['mae'] = compute_mae(targets, predictions)
 
