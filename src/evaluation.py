@@ -6,7 +6,7 @@ import numpy as np
 
 def compute_custom_ndcg(true_rankings, predicted_scores, k=None, gain_func='linear', discount_func='logarithmic'):
     """
-    Compute mean nDCG@k for predicted rankings with customizable gain and discount functions.
+    Compute per group and mean nDCG@k for predicted rankings with customizable gain and discount functions.
     Gain function options:
         - exponential
         - linear
@@ -49,7 +49,9 @@ def compute_custom_ndcg(true_rankings, predicted_scores, k=None, gain_func='line
         ndcg_value = dcg_value / idcg_value
         ndcg_values.append(ndcg_value)
 
-    return sum(ndcg_values) / len(ndcg_values)
+    mean_ndcg = sum(ndcg_values) / len(ndcg_values)
+
+    return mean_ndcg, ndcg_values
 
 
 def compute_mae(targets, predictions):
@@ -59,7 +61,7 @@ def compute_mae(targets, predictions):
 
 def compute_hit_rate_at_1(true_rankings, predicted_rankings):
     """
-    Compute mean hit rate @ 1 for predicted rankings.
+    Compute per group mean hit rate @ 1 for predicted rankings.
     This metric returns 1 if any of the items with maximum relevance has been ranked first, and 0 otherwise.
     """
     hit_rates = []
@@ -72,7 +74,9 @@ def compute_hit_rate_at_1(true_rankings, predicted_rankings):
         hit = int(true_ranking[np.argmax(predicted_ranking)] == max_relevance)
         hit_rates.append(hit)
 
-    return sum(hit_rates) / len(hit_rates)
+    mean_hit_rate = sum(hit_rates) / len(hit_rates)
+
+    return mean_hit_rate, hit_rates
 
 
 class RankingEvaluator:
@@ -84,7 +88,8 @@ class RankingEvaluator:
     def __init__(self,
                  ndcg_k: Union[Union[int, Literal['all']], List[Union[int, Literal['all']]]] = 'all',
                  ndcg_gain_func='linear',
-                 ndcg_discount_func='logarithmic'
+                 ndcg_discount_func='logarithmic',
+                 return_metrics_per_group=False
                  ):
         if isinstance(ndcg_k, list):
             self.ndcg_k = ndcg_k
@@ -94,24 +99,34 @@ class RankingEvaluator:
         self.ndcg_gain_func = ndcg_gain_func
         self.ndcg_discount_func = ndcg_discount_func
 
+        self.return_metrics_per_group = return_metrics_per_group
+
     def __call__(self, targets, predictions, group_ids):
         # todo: bug: works improperly if predictions shape is e.g. [n_targets, 1]
         true_rankings, predicted_rankings = pairs_to_rankings(targets, predictions, group_ids)
 
-        results = {}
+        mean_metrics = {}
+        per_group_metrics = {'group_id': list(group_ids)}
 
         for ndcg_k in self.ndcg_k:
             if ndcg_k == 'all':
-                ndcg_value = compute_custom_ndcg(true_rankings, predicted_rankings,
+                mean_ndcg, ndcg_per_group = compute_custom_ndcg(true_rankings, predicted_rankings,
                                                  None, self.ndcg_gain_func, self.ndcg_discount_func)
             else:
-                ndcg_value = compute_custom_ndcg(true_rankings, predicted_rankings,
+                mean_ndcg, ndcg_per_group = compute_custom_ndcg(true_rankings, predicted_rankings,
                                                  ndcg_k, self.ndcg_gain_func, self.ndcg_discount_func)
 
-            results[f'ndcg@{ndcg_k}_g.{self.ndcg_gain_func}_d.{self.ndcg_discount_func}'] = ndcg_value
+            ndcg_name = f'ndcg@{ndcg_k}_g.{self.ndcg_gain_func}_d.{self.ndcg_discount_func}'
+            mean_metrics[ndcg_name] = mean_ndcg
+            per_group_metrics[ndcg_name] = ndcg_per_group
 
-        results['mae'] = compute_mae(targets, predictions)
+        mean_metrics['mae'] = compute_mae(targets, predictions)
 
-        results['hit_rate@1'] = compute_hit_rate_at_1(true_rankings, predicted_rankings)
+        mean_hit_rate, per_group_hit_rates = compute_hit_rate_at_1(true_rankings, predicted_rankings)
+        mean_metrics['hit_rate@1'] = mean_hit_rate
+        per_group_metrics['hit_rate@1'] = per_group_hit_rates
 
-        return results
+        if self.return_metrics_per_group:
+            return mean_metrics, per_group_metrics
+        else:
+            return mean_metrics
