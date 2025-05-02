@@ -79,7 +79,7 @@ class RankingEvaluator:
     """Evaluate ranking metrics on question-answer pairs."""
 
     # todo: refactor predicted_rankings to predicted_scores_dict
-    # true_rankings -> true_relevances_dict
+    # similarly true_rankings -> true_relevances_dict
 
     def __init__(self,
                  ndcg_k: Union[Union[int, Literal['all']], List[Union[int, Literal['all']]]] = 'all',
@@ -95,6 +95,7 @@ class RankingEvaluator:
         self.ndcg_discount_func = ndcg_discount_func
 
     def __call__(self, targets, predictions, group_ids):
+        # todo: bug: works improperly if predictions shape is e.g. [n_targets, 1]
         true_rankings, predicted_rankings = pairs_to_rankings(targets, predictions, group_ids)
 
         results = {}
