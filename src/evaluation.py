@@ -106,7 +106,7 @@ class RankingEvaluator:
         true_rankings, predicted_rankings = pairs_to_rankings(targets, predictions, group_ids)
 
         mean_metrics = {}
-        per_group_metrics = {'group_id': list(group_ids)}
+        per_group_metrics = {'group_id': list(true_rankings.keys())}
 
         for ndcg_k in self.ndcg_k:
             if ndcg_k == 'all':
