@@ -1,5 +1,6 @@
 from typing import Tuple, Optional, List
 import pandas as pd
+import numpy as np
 from collections import defaultdict
 from datasets import Dataset, Value, DatasetDict
 from sklearn.model_selection import train_test_split
@@ -7,17 +8,22 @@ from sklearn.model_selection import train_test_split
 
 def dalip_normalize_answer_scores(dataset_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Normalize answer scores in a Dalip-like dataset to avoid negative values in nDCG computation.
+    Apply transformations to answer scores in a Dalip-like dataset.
+    Transformations applied:
+    - Min-shifting to avoid negative values in nDCG computation
+    - Log transformation (ln (x + 1)) to reduce skewness.
     :param dataset_df:
     :return:
     """
     answers_mask = dataset_df['PostTypeId'] == 2
 
     dataset_df['NormalizedScore'] = pd.NA
-
     min_answer_score = dataset_df.loc[answers_mask, 'Score'].min()
-
     dataset_df.loc[answers_mask, 'NormalizedScore'] = dataset_df.loc[answers_mask, 'Score'] - min_answer_score
+
+    dataset_df['LogNormalizedScore'] = pd.NA
+    dataset_df.loc[answers_mask, 'LogNormalizedScore'] = np.log1p(
+        dataset_df.loc[answers_mask, 'NormalizedScore'].astype(int))
 
     return dataset_df
 
@@ -51,8 +57,8 @@ def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
             'AcceptedAnswerId': 'accepted_answer_id'
         })
 
-    answer_features = ['Id', 'ParentId', 'CreationDate', 'Score', 'NormalizedScore', 'Body', 'LastEditDate',
-                       'LastActivityDate', 'CommentCount', 'CommunityOwnedDate']
+    answer_features = ['Id', 'ParentId', 'CreationDate', 'Score', 'NormalizedScore', 'LogNormalizedScore',
+                       'Body', 'LastEditDate', 'LastActivityDate', 'CommentCount', 'CommunityOwnedDate']
     answers_df = dataset_df[dataset_df['PostTypeId'] == 2][answer_features].rename(
         columns={
             'Id': 'answer_id',
@@ -60,6 +66,7 @@ def dalip_dataset_create_pairs(dataset_df: pd.DataFrame) -> pd.DataFrame:
             'CreationDate': 'answer_creation_date',
             'Score': 'answer_score',
             'NormalizedScore': 'answer_normalized_score',
+            'LogNormalizedScore': 'answer_log_normalized_score',
             'Body': 'answer_body',
             'LastEditDate': 'answer_last_edit_date',
             'LastActivityDate': 'answer_last_activity_date',
