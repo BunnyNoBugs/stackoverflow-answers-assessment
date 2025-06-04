@@ -1,7 +1,10 @@
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Union, Literal
 import pandas as pd
 import numpy as np
 from collections import defaultdict
+from itertools import combinations
+import random
+from tqdm import tqdm
 from datasets import Dataset, Value, DatasetDict
 from sklearn.model_selection import train_test_split
 
@@ -136,3 +139,78 @@ def pairs_to_rankings(targets, predictions, group_ids) -> Tuple[dict, dict]:
         predicted_scores[group_id].append(prediction)
 
     return true_scores, predicted_scores
+
+
+def create_pairs_dataset_df(dataset_df,
+                            pairs_sampling_strategy: Union[Literal['mean'], Literal['topk']] = 'mean',
+                            n: Union[int, Literal['all']] = 'all',
+                            TARGET_COL='answer_normalized_score'
+                            ) -> pd.DataFrame:
+    """
+    Create a dataset of answer pairs out of a dataset of question-answer pairs.
+    ``pairs_sampling_strategy`` and ``n`` options follow those of
+    ``lambdarank_pair_method`` and ``lambdarank_num_pair_per_sample`` in xgboost.
+    :param dataset_df:
+    :param pairs_sampling_strategy:
+    :param n:
+    :param TARGET_COL:
+    :return:
+    """
+
+    def create_pairs(group, pairs_sampling_strategy, n):
+        group = group.sort_values(TARGET_COL, ascending=False)
+
+        all_pairs_idxs = list(combinations(group.index, 2))
+        pairs_idxs = []
+
+        if n == 'all':
+            for pair_idx in all_pairs_idxs:
+                if group.loc[pair_idx[0]][TARGET_COL] != group.loc[pair_idx[1]][TARGET_COL]:
+                    pairs_idxs.append(pair_idx)
+
+        else:
+            if pairs_sampling_strategy == 'mean':
+                random.shuffle(all_pairs_idxs)
+                for pair_idx in all_pairs_idxs:
+                    if group.loc[pair_idx[0]][TARGET_COL] != group.loc[pair_idx[1]][TARGET_COL]:
+                        pairs_idxs.append(pair_idx)
+                    if len(pairs_idxs) == n:
+                        break
+
+            elif pairs_sampling_strategy == 'topk':
+                for curr_k in range(min(n, len(group))):
+                    anchor_idx = group.index[curr_k]
+                    for idx in group.index[curr_k:]:
+                        if group.loc[anchor_idx][TARGET_COL] != group.loc[idx][TARGET_COL]:
+                            pairs_idxs.append((anchor_idx, idx))
+
+        pairs = []
+        for pair_idx in pairs_idxs:
+            pair = {
+                'question_id': group.loc[pair_idx[0]]['question_id'],
+                'answer_1_id': group.loc[pair_idx[0]]['answer_id'],
+                'answer_2_id': group.loc[pair_idx[1]]['answer_id'],
+                'question_text': group.loc[pair_idx[0]]['question_text'],
+                'answer_1_text': group.loc[pair_idx[0]]['answer_text'],
+                'answer_2_text': group.loc[pair_idx[1]]['answer_text'],
+                f'answer_1_{TARGET_COL}': group.loc[pair_idx[0]][TARGET_COL],
+                f'answer_2_{TARGET_COL}': group.loc[pair_idx[1]][TARGET_COL],
+            }
+            if group.loc[pair_idx[0]][TARGET_COL] > group.loc[pair_idx[1]][TARGET_COL]:
+                pair['label'] = 1
+            else:
+                pair['label'] = -1
+
+            pairs.append(pair)
+
+        return pairs
+
+    groups = dataset_df.groupby('question_id')
+
+    pairs_dataset_df = []
+    for name, group in tqdm(groups):
+        group_pairs = create_pairs(group, pairs_sampling_strategy, n)
+        pairs_dataset_df.extend(group_pairs)
+    pairs_dataset_df = pd.DataFrame(pairs_dataset_df)
+
+    return pairs_dataset_df
