@@ -9,3 +9,7 @@ paths:
   models:
     dalip_embeddings_test: "models/dalip/embeddings/test/"
     dalip_embeddings: "models/dalip/embeddings/"
+    dalip_bi-encoder: "models/dalip/bi-encoder/"
+    dalip_cross-encoder: "models/dalip/cross-encoder"
+    dalip_bi-encoder_ranking: "models/dalip/bi-encoder_ranking"
+    dalip_cross-encoder_ranking: "models/dalip/cross-encoder_ranking"
