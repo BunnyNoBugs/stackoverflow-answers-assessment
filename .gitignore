@@ -170,3 +170,6 @@ wandb
 
 #models
 *.pickle
+
+#output artifacts
+outputs
