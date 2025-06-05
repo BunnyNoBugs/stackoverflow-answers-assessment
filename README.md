@@ -13,6 +13,6 @@ We also conduct an exploratory analysis of the dataset.
 The contents of the repository are the following:
 * `bibliography` contains a notebook for bibliography export
 * `config` contains a config file with variables relevant for the project
-* `experiments` contains code for training models and analyzing data
+* `experiments` contains code for training models and analyzing the dataset
 * `results_analysis` contains code for the analysis of the results
 * `src` contains reusable code for different stages of the training pipeline.
