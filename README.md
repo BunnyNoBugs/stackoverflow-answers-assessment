@@ -15,4 +15,4 @@ The contents of the repository are the following:
 * `config` contains a config file with variables relevant for the project
 * `experiments` contains code for training models and analyzing data
 * `results_analysis` contains code for the analysis of the results
-* `src` contains reusable code for different stages of the project.
+* `src` contains reusable code for different stages of the training pipeline.
